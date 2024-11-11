@@ -1,8 +1,8 @@
 ---
 layout: post
-title: 第一篇 blog
+title: 第二篇 blog
 categories: [生活, 生命, 日志]
-description: 我的第一篇 blog
+description: 我的第二篇 blog
 keywords: blog
 ---
 
