@@ -1,0 +1,17 @@
+---
+layout: post
+title: 第一篇 blog
+categories: [生活, 生命]
+description: 我的第一篇 blog
+keywords: blog
+mermaid: false
+sequence: false
+flow: false
+mathjax: false
+mindmap: false
+mindmap2: false
+---
+
+第一篇 blog 测试一下，以后可能会在 cnblog 和 github.io 上一起发 blog 了。
+
+由于某些 blog 在 cnblogs 上不过审，所以会往 github.io 上发一发。
