@@ -58,10 +58,10 @@ highlight_theme: github
 #      Author      #
 # ---------------- #
 author: En PiXi
-organization: Beijing Institute of Technology
+organization: BIT
 organization_url: 
 github_username: poplpr
-location: 中国大连（虽然一直在北京飘着） / Dalian, China (currently in Beijing)
+location: 中国大连 / Dalian, China
 email: poplpr@thisisnoemail.com
 
 # ---------------- #
@@ -165,23 +165,23 @@ disqus:
     username: 
 # gitment 配置参考：https://imsun.net/posts/gitment-introduction/
 gitment:
-    owner: mzlogin
+    owner: poplpr
     repo: blog-comments
     oauth:
-        client_id: d2e1cbbd298958076462
-        client_secret: b42a4178e5fd4a7cf63189ef4b1453b05c375709
+        client_id: Ov23lif1Ny2NmeCBH4xt
+        client_secret: 9e9a7287acecef0dd0592193da1ec422fd2a1c78
 # gitalk 配置参考：https://github.com/gitalk/gitalk#install
 gitalk:
-    owner: mzlogin
+    owner: poplpr
     repo: blog-comments
-    clientID: d2e1cbbd298958076462
-    clientSecret: b42a4178e5fd4a7cf63189ef4b1453b05c375709
+    clientID: Ov23lif1Ny2NmeCBH4xt
+    clientSecret: 9e9a7287acecef0dd0592193da1ec422fd2a1c78
 # utterances 配置参考：https://utteranc.es/
 utterances:
-    repo: mzlogin/blog-comments
+    repo: poplpr/blog-comments
 # beaudar 配置参考：https://beaudar.lipk.org/
 beaudar:
-    repo: mzlogin/blog-comments
+    repo: poplpr/blog-comments
 # giscus 配置参考：https://giscus.app/zh-CN
 giscus:
     repo: mzlogin/blog-comments
