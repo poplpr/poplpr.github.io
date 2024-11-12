@@ -2,17 +2,19 @@
 layout: page
 title: About
 description: 打码改变世界
-keywords: Zhuang Ma, 马壮
+keywords: poplpr
 comments: true
 menu: 关于
 permalink: /about/
 ---
 
-我是马壮，码而生，码而立。
+我是poplpr，目前失业中。
 
-仰慕「优雅编码的艺术」。
+曾经拿到过 icpc/ccpc Ag\*4，蓝桥杯国一\*4.
 
-坚信熟能生巧，努力改变人生。
+现在正在赶 NLP 论文，但是可惜的是我在学术上完全没有天赋，期望赶完论文赶紧向工程转型。
+
+在工程上啥也不会……很糟糕的校招……
 
 ## 联系
 
