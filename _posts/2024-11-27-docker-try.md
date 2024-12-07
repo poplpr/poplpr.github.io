@@ -24,6 +24,18 @@ docker run -itd --name minirts --privileged -v D:/code/ELF1120:/root/ELF1120 doc
 
 不知道为什么这里必须是 `-itd` 不能是 `-d`，否则启动不起来，原因不明。
 
+参数说明：
+
+- **-i**: 交互式操作。
+- **-t**: 终端。
+- **-d**: 参数默认不会进入容器
+- **-v**: 路径映射
+- **--privileged**: 
+  - 使用该参数，container内的root拥有真正的root权限。
+  - 否则，container内的root只是外部的一个普通用户权限。
+  - privileged启动的容器，可以看到很多host上的设备，并且可以执行mount。
+  - 甚至允许你在docker容器中启动docker容器。 
+
 # 配置环境
 
 ## 假如说环境是这样的
