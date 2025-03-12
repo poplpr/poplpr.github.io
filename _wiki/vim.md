@@ -199,15 +199,6 @@ trick: 可以使用 '.' 重复上一次操作。
 
 注：`&` 代表正则表达式全部匹配项，另外还有 `\1`、'\2'、...、`\9` 代表第 1 到 9 个匹配项。
 
-#### 替换
-
-这里和操作符好像没多大关系
-
-| 功能                              | 按键                |
-|:----------------------------------|:--------------------|
-| 将全文中的 str1 替换为 str2       | `:%s/str1/str2/g`   |
-| 将 1 到 5 行中的 str1 替换为 str2 | `:1,5s/str1/str2/g` |
-
 ### 文本对象 (Text Object)
 
 文本对象是结构化的文本片段，或者，如果你愿意，文档域模型的实体。文档是由什么组成的？单词、句子、引用文本、段落、块、（超文本标记语言）标签等。这些是文本对象。
@@ -226,6 +217,47 @@ trick: 可以使用 '.' 重复上一次操作。
 - ": 这个比较特殊，对于单/双引号而言，使用这种指令甚至可以不在引号内部。在外面也可以使用。
 - (/[/{/<: 括号，其中 `b` 与 `(` 等价，`B` 与 `{` 等价。
 - t: tag. HTML 中可能会用到。
+
+### Command-line 模式
+
+- `:edit {relative-path-to-file}`
+  - 由于 VscodeVim 不支持这里 Tab 补全，因此本指令主要用于创建新文件。
+  - 简略版本是 `:e`。
+- `:wa` 保存所有文件，`:qa` 关闭所有文件
+
+#### 操作
+
+这里特指使用 `d`, `c`, `y` 类似的操作。`:[range]command[options]` 是这种操作的格式。
+
+例如，删除的格式为：`:[range]d [register]`，有：
+
+- 使用数字 (e.g. :10,12d to delete lines 10, 11 and 12)
+- 使用偏移量 (e.g. :10,+2d to delete lines 10, 11 and 12)
+- 使用 `.` 表示当前行 (e.g. :.,+2d to delete the current line and the next two ones)
+- 使用 `%` 表示当前文件 (e.g. :%d to delete the whole file)
+- 使用 `0` 表示文件的开头 (e.g. :0,+10d to delete the first 10 lines)
+- 使用 `$` 表示文件的结尾 (e.g. :.,$d to delete from the current line to the end of the file)
+- 如果使用可视模式时，使用 `:'<,'>` 表示现在可视模式下选择的范围。
+
+`:yank`, `:put`, `:copy`, `:move` 在 VSCodeVim 下不支持，除非集成 NeoVim。
+
+#### 重复上一次操作
+
+使用 `@:` 重复上一次的 ex command，如果要再次重复要使用 `@@`。
+
+#### 替换
+
+这里的格式为：`[range]s/{pattern}/{substitute}/{flags}`
+
+- `range` 给定范围。
+- `pattern` 是模式串。比如 `/{pattern}` 支持正则表达式.
+- `substitute` 是要修改成的字符串
+- `flags` 表示一些设置。比如 `g` 表示全部, `i` 表示不区分大小写, `c` 表示确认每一次替换。
+
+| 功能                              | 按键                |
+|:----------------------------------|:--------------------|
+| 将全文中的 str1 替换为 str2       | `:%s/str1/str2/g`   |
+| 将 1 到 5 行中的 str1 替换为 str2 | `:1,5s/str1/str2/g` |
 
 ### 选择
 
@@ -407,3 +439,20 @@ vim +[num] filename
 ```
 
 num 表示行号，不填则跳转到文件末尾。
+
+### 屏幕分块 (splits and tabs)
+
+#### splits
+
+- `:sp {relative-path-to-file}` 水平 split
+- `:vsp {relative-path-to-file}` 垂直 split
+- `Ctrl-w s` 水平 split
+- `Ctrl-w v` 垂直 split
+- `Ctrl-w` + `hjkl` 在 split 间移动。
+
+#### tabs
+
+- `:tabnew {file}` 在一个新 tab 中打开文件
+- `:tabn` (`:tabnext`) 下一个 tab
+- `:tabp` (`:tabprevious`) 上一个 tab
+- `:tabo` (`:tabonly`) 关掉所有其他 tabs。
