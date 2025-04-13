@@ -8,31 +8,167 @@ description: Git 常用操作记录。
 keywords: Git, 版本控制
 ---
 
+## 初次使用配置
+
+### 总结一下常用配置
+
+```bash
+git config --global user.name "poplpr"
+git config --global user.email 123456@qq.com
+git config --global core.editor=vim
+git config --global core.autocrlf input
+git config --global gui.encoding utf-8
+git config --global i18n.commitencoding utf-8
+git config --global i18n.logoutputencoding utf-8
+git config --global core.quotepath false
+```
+
+### 三种配置
+
+Git有三种配置，分别以文件的形式存放在三个不同的地方。可以在命令行中使用git config工具查看这些变量。
+
+**系统配置（对所有用户都适用）**
+存放在git的安装目录下：`%Git%/etc/gitconfig`；若使用 git config 时用 --system 选项，读写的就是这个文件：
+```bash
+git config --system core.autocrlf
+```
+
+**用户配置（只适用于该用户）**
+存放在用户目录下。例如 linux 存放在：`~/.gitconfig`；若使用 git config 时用 --global 选项，读写的就是这个文件：
+```bash
+git config --global user.name
+```
+
+**仓库配置（只对当前项目有效）**
+当前仓库的配置文件（也就是工作目录中的 `.git/config` 文件）；若使用 git config 时用 --local 选项，读写的就是这个文件：
+```bash
+git config --local remote.origin.url
+```
+
+注：每一个级别的配置都会覆盖上层的相同配置，例如 `.git/config` 里的配置会覆盖 `%Git%/etc/gitconfig` 中的同名变量。 
+
+| 配置     | 命令                                         |
+| -------- | -------------------------------------------- |
+| 设置姓名 | git config --global user.name "poplpr"       |
+| 设置邮箱 | git config --global user.email 123456@qq.com |
+
+### 文本换行符配置
+
+假如你正在 Windows 上写程序，又或者你正在和其他人合作，他们在 Windows 上编程，而你却在其他系统上，在这些情况下，你可能会遇到行尾结束符问题。这是因为 Windows 使用回车和换行两个字符来结束一行，而 Mac 和 Linux 只使用换行一个字符。虽然这是小问题，但它会极大地扰乱跨平台协作。
+
+Git 可以在你提交时自动地把行结束符 CRLF 转换成 LF，而在获取代码时把 LF 转换成 CRLF。用 `core.autocrlf` 来打开此项功能，如果是在 Windows 系统上，把它设置成`true`，这样当获取代码时，LF会被转换成CRLF：
+```bash
+$ git config --global core.autocrlf true
+```
+
+Linux 或 Mac 系统使用 LF 作为行结束符，因此你不想 Git 在切出文件时进行自动的转换；当一个以 CRLF 为行结束符的文件不小心被引入时你肯定想进行修正，把 `core.autocrlf` 设置成 `input` 来告诉Git在提交时把 CRLF 转换成 LF，获取代码时不转换，Windows 上 VsCode 可以设置行尾序列为 LF，然后也可以使用 `input`：
+
+```bash
+$ git config --global core.autocrlf input
+```
+
+这样会在Windows系统上的切出文件中保留CRLF，会在Mac和Linux系统上，包括仓库中保留LF。
+
+如果你是Windows程序员，且正在开发仅运行在Windows上的项目，可以设置`false`取消此功能，把回车符记录在库中：
+```bash
+$ git config --global core.autocrlf false
+``` 
+
+### 文本编码配置
+
+- `i18n.commitEncoding` 选项：用来让 `git commit log` 存储时，采用的编码，默认UTF-8。
+- `i18n.logOutputEncoding` 选项：查看 `git log` 时，显示采用的编码，建议设置为UTF-8。 
+
+下面的两个中文编码支持和显示路径的中文我一般不调。
+
+#### 中文编码支持
+```bash
+git config --global gui.encoding utf-8
+git config --global i18n.commitencoding utf-8
+git config --global i18n.logoutputencoding utf-8
+```
+#### 显示路径中的中文
+```bash
+git config --global core.quotepath false
+``` 
+
+### 与服务器的认证配置
+
+**http / https协议认证**
+
+- 设置口令缓存：
+```bash
+git config --global credential.helper store
+```
+- 添加HTTPS证书信任：
+```bash
+git config http.sslverify false
+```
+
+**ssh协议认证**
+
+SSH协议是一种非常常用的Git仓库访问协议，使用公钥认证、无需输入密码，加密传输，操作便利又保证安全性，通过
+
+```bash
+ssh-keygen -t rsa -C 123456@qq.com
+```
+
+来生成 SSH key。然后我这里都设置的默认。
+
+然后把生成的 `*.pub` 文件丢到远程服务器的 `~/.ssh/authorized_keys`。如果没有这个文件请输入 `touch ~/.ssh/authorized_keys` 创建一个。接下来可以写成 `echo 你的公钥 >> ~/.ssh/authorized_keys` 或者用 vim 进行导入。
+
+和服务器的配置请慢慢自行配置吧。
+
 ## 常用命令
 
-| 功能                      | 命令                                  |
-|:--------------------------|:--------------------------------------|
-| 添加文件/更改到暂存区     | git add filename                      |
-| 添加所有文件/更改到暂存区 | git add .                             |
-| 提交                      | git commit -m msg                     |
-| 从远程仓库拉取最新代码    | git pull origin master                |
-| 推送到远程仓库            | git push origin master                |
-| 查看配置信息              | git config --list                     |
-| 查看文件列表              | git ls-files                          |
-| 比较工作区和暂存区        | git diff                              |
-| 比较暂存区和版本库        | git diff --cached                     |
-| 比较工作区和版本库        | git diff HEAD                         |
-| 从暂存区移除文件          | git reset HEAD filename               |
-| 查看本地远程仓库配置      | git remote -v                         |
-| 回滚                      | git reset --hard 提交SHA              |
-| 强制推送到远程仓库        | git push -f origin master             |
-| 修改上次 commit           | git commit --amend                    |
-| 推送 tags 到远程仓库      | git push --tags                       |
-| 推送单个 tag 到远程仓库   | git push origin [tagname]             |
-| 删除远程分支              | git push origin --delete [branchName] |
-| 远程空分支（等同于删除）  | git push origin :[branchName]         |
-| 查看所有分支历史          | gitk --all                            |
-| 按日期排序显示历史        | gitk --date-order                     |
+| 功能                                  | 命令                                        |
+| :------------------------------------ | :------------------------------------------ |
+| 初始化 Git 仓库                       | git init                                    |
+| 添加文件/更改到暂存区                 | git add filename                            |
+| 添加所有文件/更改到暂存区             | git add .                                   |
+| 回退本地所有修改而未提交的文件        | git checkout .                              |
+| 回退本地某一个修改而未提交文件        | git checkout filename                      |
+| 把某一个提交单个 commit 内容改到 HEAD | git cherry-pick HASH1                       |
+| 提交                                  | git commit -m msg                           |
+| 一次性提交所有在暂存区文件            | git commit -am "msg"                        |
+| 从远程仓库拉取最新代码                | git pull origin master                      |
+| 推送到远程仓库                        | git push origin master                      |
+| 查看配置信息                          | git config --list                           |
+| 查看文件列表                          | git ls-files                                |
+| 比较工作区和暂存区                    | git diff                                    |
+| 比较暂存区和版本库                    | git diff --cached                           |
+| 比较工作区和版本库                    | git diff HEAD                               |
+| 比较两个节点的差异                    | git diff HASH1 HASH2                        |
+| 比较两个分支之间的差异                | git diff master..branchA                    |
+| 比较时只看文件列表                    | git diff --name-status                      |
+| 获取分支代码，且不会自动合并          | git fetch origin remote_branch:local_branch |
+| 查看历史                              | git log                                     |
+| 从暂存区移除文件                      | git reset HEAD filename                     |
+| 查看本地远程仓库配置                  | git remote -v                               |
+| 硬回滚                                | git reset --hard 提交SHA                    |
+| 将指定文件从当前分支的缓存区删除      | git rm filename                             |
+| 移动文件/重命名文件                   | git mv pathA pathB                          |
+| 强制推送到远程仓库                    | git push -f origin master                   |
+| 修改上次 commit                       | git commit --amend                          |
+| 从远端服务器 pull 下来自动合并        | git pull origin remote_branch:local_branch  |
+| 推送 tags 到远程仓库                  | git push --tags                             |
+| 常用推送命令格式                      | git push origin branch_name                 |
+| 把本地分支推送到远端分支              | git push origin local_branch:remote_branch  |
+| 推送单个 tag 到远程仓库               | git push origin [tagname]                   |
+| 删除远程分支                          | git push origin --delete [branchName]       |
+| 远程空分支（等同于删除）              | git push origin :[branchName]               |
+| 显示工作区和暂存区的状态              | git status                                  |
+| 查看所有分支历史                      | gitk --all                                  |
+| 按日期排序显示历史                    | gitk --date-order                           |
+
+## 分支
+
+`git branch` 查看本地所有分支，加上 `-r` 查看远端服务器上的分支，如果想查看远端服务器和本地工程上所有分支，执行 `git branch -a` 即可。
+
+- 新建分支：现在一般用 `git checkout -b new_branch` 新建分支了。
+- 删除分支：`git branch -d` 删除，或者 `git branch -D` 删除，大写 D 是强制删除。
+- 切换分支：`git checkout branch_name`，如果要强制切换，请加上 `-f`。
+- 合并分支：`git merge branch_name` 或者 `git rebase branch_name`，但是后者会修改提交历史，使提交历史呈现线性。
 
 ## Q&A
 
@@ -52,6 +188,8 @@ keywords: Git, 版本控制
 ```
 
 参考 <http://zengrong.net/post/1249.htm>
+
+或者像上文一样配置一下。
 
 ### 如何处理本地有更改需要从服务器合入新代码的情况？
 
