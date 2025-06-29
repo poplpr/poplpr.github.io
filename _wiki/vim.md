@@ -275,6 +275,12 @@ trick: 可以使用 '.' 重复上一次操作。
 
 `:yank`, `:put`, `:copy`, `:move` 在 VSCodeVim 下不支持，除非集成 NeoVim。
 
+- `:[range]delete [register]` 删除 `[range]` 范围内的内容，保存到 `[register]` 中。简写为 `:d`
+- `:[range]yank [register]` 复制 `[range]` 范围内的内容，保存到 `[register]` 中。简写为 `:y`
+- `:[range]put [register]` 把 `[register]` 中的内容粘贴到指定位置 `[range]` 中。简写为 `:pu`
+- `:[range]copy {address}` 把 `[range]` 范围内的内容复制到 `{address}` 地址。简写为 `:t`
+- `:[range]move {address}` 把 `[range]` 范围内的内容移动到 `{address}` 地址。简写为 `:m`
+
 #### 重复上一次操作
 
 使用 `@:` 重复上一次的 ex command，如果要再次重复要使用 `@@`。有一些诸如跳缓冲区的操作，可以使用 `<C-o>` 反过来跳回去，但是有一些修改操作请使用 `u` 键还原。
@@ -340,11 +346,31 @@ trick: 可以使用 '.' 重复上一次操作。
 | 当前行执行上一次替换   | `:&&`          |
 | 高亮选区执行上一次替换 | `:'<,'>&&`     |
 
+#### `:global` 命令
+
+`:global` 命令允许我们在某个指定模式的所有匹配行上运行 Ex 命令。简写为 `:g`。
+
+```vim
+:[range] global[!] /{pattern}/ [cmd]
+```
+
+在默认情况下，`:global` 的作用范围是整个文件（`%`）。`[cmd]` 可以是除了 `:global` 之外的所有 Ex 命令。若不指定，则会缺省使用 `:print`。
+
+`:global!` 或者 `:vglobal` 可以反转 `:global` 的行为。这两条命令将指示 Vim 在没有匹配到指定模式的行上执行 `[cmd]`。`:vglobal` 简写为 `:v`。
+
+使用 `:global` 与 `:yank` 配合时，请**使用大写寄存器**，这样表示依次把内容附加到寄存器中。
+
+在 Ex 命令中，`.` 符号通常表示光标所在行，但在 `:global` 命令的上下文中，它表示 `{pattern}` 的匹配行。因此，`:global` 的广义形式如下：
+
+```vim
+:g/{start}/ .,{finish} [cmd]
+```
+
 #### 复制与移动
 
 | 功能                    | 按键                                              |
 | :---------------------- | :------------------------------------------------ |
-| 复制到 {address} 行下方 | `:[range]move {address}` 或 `:[range]t {address}` |
+| 复制到 {address} 行下方 | `:[range]copy {address}` 或 `:[range]t {address}` |
 | 移动到 {address} 行下方 | `:[range]move {address}` 或 `:[range]m {address}` |
 
 #### 在指定范围上执行普通模式命令
