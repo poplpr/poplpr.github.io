@@ -141,3 +141,318 @@ new operator 不可重载。其过程是：先调用 operator new（这个是可
 于是，在**裸指针**的前提下，不得不在构造函数中写一大堆 `try...catch...` 的形式，而如果是**常量裸指针**，你会发现你不得不在所有裸指针的初始化函数内，写一大堆 `try..catch...` 的内容。
 
 最好的方法，其实还是引入**智能指针**来管理裸指针指向的资源。
+
+## 条款 11：禁止异常流出析构函数外
+
+两个理由：
+
+1. 避免 terminate 函数在异常传播的栈展开机制中被调用
+2. 可以协助确保析构函数完成其应该完成的所有事情
+
+## 条款 12：了解“抛出一个 exception”与“传递一个参数”或“调用一个虚函数”之间的差异
+
+“传递对象到函数去，或是以对象调用虚函数”和“将对象抛出成为一个异常”之间，有 3 个主要的差异：
+
+1. 异常对象在 `throw exception` 的时候，总是会被复制（异常向外层传递时，防止局部变量被析构）
+   1. 如果以 by value 的方式捕捉，甚至要被复制两次
+   2. 在异常抛出转达的过程中，请仅使用 `throw`，不要带变量，防止再次复制
+   3. 复制动作永远以对象的**静态类型**为本
+   4. 千万不要抛出一个指向局部对象的指针
+2. “被抛出成为异常”的对象，其被允许的类型转换动作，比“被传递到函数”的对象少。catch 中的隐式转换仅有两种：
+   1. “继承架构中的类转换”
+   2. 从一个“有型指针”转为“无型指针”，如 `catch (const void*)` 可以捕捉任何指针类型的异常
+3. catch 子句总是依出现顺序做匹配尝试。遵循最先吻合的策略，因此，绝不要将“针对基类而设计的 catch 子句”放在“针对派生类而设计的 catch 子句”之前。
+
+## 条款 13：以 by reference 方式捕捉 exceptions
+
+传递 exception 方式有三种：pointer、value 和 reference。
+
+pointer 的缺点在于：经常抛出一个指向局部变量的指针，回到上层函数会导致指向不存在的对象。而且 4 个标准的 exceptions `bad_alloc`, `bad_cast`, `bad_typeid` 和 `bad_exception` 都是对象而非对象指针。
+
+value 的缺点在于：复制问题；捕获基类导致的切割问题。
+
+## 条款 14：明智运用 exception specification（已废弃）
+
+exception specification 是指在函数开头指定可能抛出的异常。如：
+
+```cpp
+void a() throw(int); // 这里声明抛出一个 int
+```
+
+`throw(A, B)` 在 C++03 中引入，C++17 中废除。
+
+现代 C++ 放弃了 “指定异常类型范围” 的设计，原因是：
+1. 实用性低：实践中，函数抛出的异常类型往往难以精确枚举（如间接调用其他函数可能引入新异常）。
+2. 性能开销：运行时需检查异常类型是否在声明范围内，增加额外开销。
+3. 维护成本高：若函数实现修改导致抛出新类型异常，需同步更新异常规范，否则行为未定义。
+
+这节就当没看见吧……
+
+## 条款 15：了解异常处理（exception handling）的成本
+
+异常处理也有自身的成本：
+
+1. 必须付出一些空间，放置异常的数据结构；付出时间，随时保证这些数据结构的正确性
+2. try 语句块的成本。使用 try 语句块，代码长度和执行速度同时膨胀/变慢 5%-10%
+3. 抛出异常的成本。在作者的时代，和正常的函数返回动作比较，由于抛出异常而导致函数返回，其速度可能比正常情况下慢 3 个数量级。
+
+因此，作者认为请对 try 语句块的使用限制于非用不可的地点，并且在真正异常的情况下才抛出异常。
+
+# 第三章：效率
+
+## 条款 16：谨记 80-20 法则
+
+80-20 法则：**一个程序 80% 的资源用于 20% 的代码身上**。这提示我们，软件的整体性能几乎总是由其构成要素（代码）的一小部分决定。
+
+有两种方法可以逼近软件的瓶颈，第一种方法是靠猜。
+
+第二种方法则是完全根据观察或实验来识别出这 20% 的代码。例如假设程序太慢，则需要一个分析器告诉你程序的不同区段各花费多少时间，于是便可以专注在特别耗时的地方加以改善。
+
+除运行时间外，知道语句被执行的频繁度，有时候也有作用。
+
+而实验也需要尽可能多的数据来使你不至于估计错代码运行的瓶颈。
+
+## 条款 17：考虑使用 lazy evaluation（缓式评估）
+
+缓式评估类似线段树中 lazy tag 的思想，要等到用到某个变量才会去计算它。
+
+作者描述了四种用途：
+
+- 引用计数（Reference Counting）
+- 区分读和写
+- Lazy Fetching（缓式取出）
+  - 但是可能会出现需要时才在 const 的成员函数获取其成员变量的情况，那么就必须把成员变量定义为 mutable 的指针。`null` 表示其未被赋值。
+  - 如果不支持 mutable 的话，可以用一个指针把 this 的常量性 const_cast 滤除，然后再修改。
+- Lazy Expression Evaluation（表达式缓评估）
+
+事实上如果计算绝对必要，缓评估可能使程序更慢，增加内存用量。
+
+## 条款 18：分期摊还预期的计算成本
+
+这一节则是作者鼓励预处理行为：令程序超前进度地做“要求以外”的更多工作。此条款称为超急评估（over-eager evaluation）
+
+其背后的观念是：如果预期程序常常会用到某个计算，可以降低每次计算的平均成本，办法是设计一份数据结构以便能够极有效率地处理需求。
+
+其中最简单的一个做法就是将“已经计算好而有可能再被需要”的数值保留下来（caching）。
+
+还有另一种做法是 Prefetching（预先取出）。此外，经验显示，如果某处的数据被需要，通常其邻近的数据也会被需要，这便是有名的 locality of reference 现象。
+
+## 条款 19：了解临时对象的来源
+
+C++ 真正的所谓临时对象是不可见的——不会在源代码中出现。只要你产生一个非堆对象而没有为它命名，便产生了一个临时对象。此临时匿名对象通常发生于两种情况：
+
+1. 当隐式类型转换（implicit type conversions）被施行起来以求函数调用能成功（值传递或被传递给 reference-to-const 参数才会发生）
+2. 当函数返回对象的时候
+
+## 条款 20：协助完成“返回值优化（RVO）”
+
+在现代 C++ 中，RVO（Return Value Optimization，返回值优化） 是编译器对函数返回对象时的一种关键优化，能避免不必要的对象复制或移动，显著提升性能。其核心是直接在调用方的内存空间构造返回对象，跳过中间临时对象的创建。
+
+在 C++98 的时代，有一个技巧是：返回所谓的 constructor arguments 以取代对象。
+
+```cpp
+const Rational operator* (const Rational& lhs, const Rational& rhs) {
+  return Rational(lhs.numerator() * rhs.numerator(), lhs.denominator() * rhs.denominator());
+}
+```
+
+这是老版本的 RVO。C++ 允许编译器将临时对象优化，使他们不存在。
+
+现代 C++ 中（主要指 C++17 后），一般有 RVO 和 NRVO（Named Return Value Optimization，命名返回值优化）两种。
+
+- RVO：它作用于右值对象，即临时对象。
+- NRVO：它作用于有名字的局部变量
+  ```cpp
+  vector<int> GetArray() {
+    vector<int> array;   // 这里定义了一个有名字的对象，左值对象
+    array.push_back(1);
+    array.push_back(2);
+    return array;   // 返回的对象是有名字的
+  }
+  ```
+
+### 无法进行优化的场景
+
+通常有这么几种情况，主要有：
+
+1. 对象类型与返回值类型不一致时，编译器无法优化（比如常见的错误是对在函数内对返回值对象使用了 std::move 操作）
+2. 返回对象依赖于运行时的分支依赖，比如：
+   ```cpp
+   vector<int> GetArray() {
+     vector<int> obj1;
+     vector<int> obj2;
+     if (..) {
+       return obj1;
+     } else {
+       return obj2;
+     }
+   }
+   ```
+
+其它场景还有：
+
+- 返回全局变量
+- 返回函数参数
+
+## 条款 21：利用重载（overload）避免隐式类型转换（implicit type conversion）
+
+本节条款的含义为：为了防止运算符操作中出现隐式类型转换，因此搞出一大堆重载相关运算符的内容。不过，有可能会变得更慢。
+
+此外，请不要写成这种用两个其他类运算的代码：`const UPINT operator+ (int lhs, int rhs)`！
+
+## 条款 22：考虑以操作符复合形式（op=）取代其独身形式（op）
+
+首先，复合操作符比其对应的独身版本效率高。
+
+第二，如果同时提供某个操作符的复合形式和独身形式，便允许代码编写者在效率与便利性之间做取舍。
+
+第三，借由“以复合作为独身版本的实现基础”，可以确保二者操作语法不变。如：
+
+```cpp
+template<class T>
+const T operator+ (const T& lhs, const T& rhs) {
+  return T(lhs) += rhs;
+}
+```
+
+## 条款 23：考虑使用其他程序库
+
+> 不同的程序库即使提供相似的机能，也往往表现出不同的性能取舍策略，所以一旦找出程序的瓶颈。你应该思考是否有可能因为改用另一个程序库而移除了那些瓶颈。
+
+## 条款 24：了解虚函数、多重继承、虚基类、运行时期类型辨识（virtual function, multiple inheritance, virtual base class, runtime type identification）的成本
+
+### 虚函数
+
+虚函数的成本：
+
+1. 必须为每个拥有虚函数的类耗费一个 vtbl（虚表）空间，其大小视虚函数的个数（包括继承而来的）而定。
+2. 必须在每一个拥有虚函数的对象内付出“一个额外指针”的代价，这个指针是指向虚表的指针 virtual table pointer(vptr)。
+3. 虚函数无法 inline
+
+### 多重继承 & 虚拟基类
+
+多重继承往往导致 virtual base class（虚拟基类）的需求。虚拟基类可能导致另一个成本：因为其实现做法常常利用指针，指向“virtual base class”部分，以消除复制行为，而对象内可能出现一个（或多个）这样的指针。
+
+### 运行时期类型辨识（runtime type identification, RTTI）
+
+RTTI 让我们得以在运行时期获得对象和类的相关信息，它们被存放在类型为 type_info 的对象内。可以利用 `typeid` 操作符取得某个类对应的 type_info 对象。
+
+RTTI 的设计理念是：根据 class 的 vtbl 来实现。比如可以在虚表中加入一个指针，指向这个 type_info 对象。
+
+# 第四章：技术
+
+## 条款 25：将构造函数和非成员函数虚化
+
+### 构造函数间接虚化
+
+虚化构造函数有一种用途是复制一个多态指针数组。英文写作 virtual copy constructor，例如：
+
+```cpp
+class NLComponent {
+public:
+  virtual NLComponent* clone() const = 0;
+  ...
+};
+class TextBlock: public NLComponent {
+public:
+  virtual TextBlock* clone() const {
+    return new TextBlock(*this);
+  }
+  ...
+};
+class Graphic: public NLComponent {
+public:
+  virtual Graphic* clone() const {
+    return new Graphic(*this);
+  }
+  ...
+};
+
+class NewsLetter {
+public:
+  NewsLetter(const NewsLetter& rhs) {
+    for (auto it = rhs.components.begin(); it != rhs.components.end(); ++it) {
+      components.push_back((*it)->clone());
+    }
+  }
+private:
+  list<NLComponent*> components;
+}
+```
+
+在上述代码中利用了虚函数返回类型规则的一个宽松点，当派生类重新定义基类的一个虚函数时，不需要一定声明与原本相同的返回类型。
+
+### 将非成员函数的行为虚化
+
+就像构造函数无法真正被虚化一样，非成员函数也无法真正被虚化。换言之，欲实现将非成员函数的行为虚化，就是要在形参为引用或指针的非成员函数中调用虚函数。
+
+## 条款 26：限制某个类所能产生的对象数量
+
+### 允许零个或一个对象
+
+可以参考之前写的单例类的写法。
+
+### 不同的对象构造状态
+
+如果需要更多数量的对象，那么就把单例类中返回引用改为 new 一个新指针的函数，返回该指针（智能指针也可）即可。
+
+### 允许对象生生灭灭
+
+这里其实只需要将引用计数和之前的伪构造函数结合一下就行。把引用计数放到真正的构造和析构函数中，如果对象过多就抛出异常。
+
+### 一个用来计算对象个数的基类
+
+可以令计数器为“template 所产生的 classes”内的一个静态成员：
+
+```cpp
+template<class BeingCounted>
+class Counted {
+public:
+  class TooManyObjects{}; // 此乃可能被抛出的异常类
+  static int objectCount() { return numObjects;}
+protected:
+  Counted();
+  Counted(const Counted& rhs);
+  ~Counted() { --numObjects;}
+private:
+  static int numObjects;
+  static const size_t maxObjects;
+  void init();
+}
+
+template<class BeingCounted>
+int Counted<BeingCounted>::numObjects = 0;
+
+template<class BeingCounted>
+Counted<BeingCounted>::Counted() { init();}
+
+template<class BeingCounted>
+Counted<BeingCounted>::Counted(const Counted<BeingCounted>&) { init();}
+
+template<class BeingCounted>
+void Counted<BeingCounted>::init() {
+  if (numObjects >= maxObjects) throw TooManyObjects();
+  ++numObjects;
+}
+```
+
+于是被计数的类变成：
+
+```cpp
+class Printer: private Counted<Printer> {
+public:
+  static Printer* makePrinter();
+  static Printer* makePrinter(const Printer& rhs);
+  ~Printer();
+  ...
+  using Counted<Printer>::objectCount;
+  using Counted<Printer>::TooManyObjects;
+private:
+  Printer();
+  Printer(const Printer& rhs);
+};
+```
+
+我们希望 Counted 大部分细节被隐藏起来，因此选用 private 继承。但是用户可能还是需要 `objectCount` 和 `TooManyObjects` 两个东西，因此需要在 public 中 using 一下。
+
+但是还有个小尾巴需要处理，那就是关于 maxObjects 的定义，必须由用户在某个实现文件中来加上这一行：`const size_t Counted<Printer>::maxObjects = 10;`。
