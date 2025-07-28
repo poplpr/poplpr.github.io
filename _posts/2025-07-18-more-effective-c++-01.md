@@ -456,3 +456,63 @@ private:
 我们希望 Counted 大部分细节被隐藏起来，因此选用 private 继承。但是用户可能还是需要 `objectCount` 和 `TooManyObjects` 两个东西，因此需要在 public 中 using 一下。
 
 但是还有个小尾巴需要处理，那就是关于 maxObjects 的定义，必须由用户在某个实现文件中来加上这一行：`const size_t Counted<Printer>::maxObjects = 10;`。
+
+## 条款 27：要求（或禁止）对象产生于堆之中
+
+### 要求对象产生于堆之中
+
+限制的方法是让析构函数为 private，而构造函数为 public。
+
+但是派生于这个基类的派生类以及内含这个类对象的类仍然存在问题。
+
+1. 派生类问题：令基类的析构函数成为 protected 即可解决继承问题，但是如果继承出的派生类定义在栈上，基类也会在栈上而非堆上。
+2. 内含问题：可以修改为“内涵一个指针，指向内含该类的对象”。
+
+### 判断某个对象是否位于堆内
+
+可以在 C++ 中使用 abstract mixin base class 满足这一需求。
+
+```cpp
+class HeapTracked {
+public:
+  class MissingAddress {}; // exception class
+  virtual ~HeapTracked() = 0;
+  static void *operator new(size_t size);
+  static void operator delete(void *ptr);
+  bool isOnHeap() const;
+private:
+  typedef const void* RawAddress;
+  static list<RawAddress> addresses;
+};
+
+list<RawAddress> HeapTracked::addresses;
+HeapTracked::~HeapTracked() {}
+
+void* HeapTracked::operator new(size_t size) {
+  void* memPtr = ::operator new(size);
+  addresses.push_front(memPtr);
+  return memPtr;
+}
+
+void HeapTracked::operator delete(void* ptr) {
+  auto it = find(addresses.begin(), addresses.end(), ptr);
+  if (it != addresses.end()) {
+    addresses.erase(it);
+    ::operator delete(ptr);
+  } else {
+    throw MissingAddress();
+  }
+}
+
+bool HeapTracked::isOnHeap() const {
+  const void* rawAddress = dynamic_cast<const void*>(this);
+  auto it = find(addresses.begin(), addresses.end(), ptr);
+  return it != addresses.end();
+}
+```
+
+然后继承这个类即可。不过，这种 mixin class 有个确定就是不能用于内建类型上（如 int 和 char）。
+
+### 禁止对象产生于堆上
+
+简单做法就是直接把 operator new 和 operator delete 都声明为 private。不过这样只能防止直接实例化的情况，无法防止派生以及内含的情况。
