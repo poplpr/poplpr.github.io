@@ -516,3 +516,103 @@ bool HeapTracked::isOnHeap() const {
 ### 禁止对象产生于堆上
 
 简单做法就是直接把 operator new 和 operator delete 都声明为 private。不过这样只能防止直接实例化的情况，无法防止派生以及内含的情况。
+
+## 条款 28：智能指针
+
+当你要实现自己的智能指针时，需要注意以下问题：
+
+1. 智能指针地构造、赋值、析构
+2. 实现 Derefenrencing Operators（解引操作符，`*p` 和 `p->`）。这里面 `p->` 在 C++ 中有一个链式设计，智能指针调用 `->` 返回原指针即可，编译器会解释为原指针使用 `->` 的操作。
+3. 测试智能指针是否为 NULL
+4. 将智能指针转换为裸指针
+5. 智能指针和“与继承有关的”类型转换
+6. 智能指针与 const
+
+总之，在原书的时代实现的智能指针与现代智能指针差异相当大，因此附上一个简单的 C++11 简化版的 `unique_ptr` 实现：
+
+```cpp
+#include <iostream>
+#include <type_traits>  // 用于 SFINAE 检查
+#include <utility>      // 用于 std::move、std::forward
+#include <memory>
+
+// 简化版 unique_ptr 实现（C++11 兼容）
+template <typename T, typename Deleter = std::default_delete<T>>
+class unique_ptr {
+public:
+    // 构造函数：接管原始指针所有权
+    explicit unique_ptr(T* ptr = nullptr) noexcept
+        : raw_ptr(ptr) {}
+
+    // 移动构造函数：转移所有权
+    unique_ptr(unique_ptr&& other) noexcept
+        : raw_ptr(other.release()),
+          deleter(std::move(other.deleter)) {}
+
+    // 模板移动构造函数：支持从 unique_ptr<U> 转换（C++11 用 SFINAE 替代 requires）
+    template <typename U, typename E>
+    unique_ptr(unique_ptr<U, E>&& other,
+               // SFINAE：仅当 U* 可转换为 T* 时才启用此构造函数
+               typename std::enable_if<std::is_convertible<U*, T*>::value>::type* = nullptr) noexcept
+        : raw_ptr(other.release()),
+          deleter(std::forward<E>(other.get_deleter())) {}
+
+    // 析构函数：释放资源
+    ~unique_ptr() {
+        if (raw_ptr) {
+            deleter(raw_ptr);
+        }
+    }
+
+    // 移动赋值运算符
+    unique_ptr& operator=(unique_ptr&& other) noexcept {
+        if (this != &other) {
+            reset(other.release());
+            deleter = std::move(other.deleter);
+        }
+        return *this;
+    }
+
+    // 禁止拷贝（C++11 语法）
+    unique_ptr(const unique_ptr&) = delete;
+    unique_ptr& operator=(const unique_ptr&) = delete;
+
+    // 指针操作符重载
+    T& operator*() const { return *raw_ptr; }
+    T* operator->() const { return raw_ptr; }
+
+    // 获取原始指针
+    T* get() const noexcept { return raw_ptr; }
+
+    // 释放所有权
+    T* release() noexcept {
+        T* temp = raw_ptr;
+        raw_ptr = nullptr;
+        return temp;
+    }
+
+    // 重置指针
+    void reset(T* new_ptr = nullptr) noexcept {
+        if (raw_ptr) {
+            deleter(raw_ptr);
+        }
+        raw_ptr = new_ptr;
+    }
+
+    // 获取删除器
+    Deleter& get_deleter() noexcept { return deleter; }
+    const Deleter& get_deleter() const noexcept { return deleter; }
+
+private:
+    T* raw_ptr = nullptr;    // 管理的原始指针
+    Deleter deleter;         // 删除器（默认使用 std::default_delete）
+};
+
+// 辅助函数：创建 unique_ptr（C++11 风格）
+template <typename T, typename... Args>
+unique_ptr<T> make_unique(Args&&... args) {
+    return unique_ptr<T>(new T(std::forward<Args>(args)...));
+}   
+```
+
+那个比较长的模板移动构造函数可以保证智能指针关于继承以及 const 的转换正确。
