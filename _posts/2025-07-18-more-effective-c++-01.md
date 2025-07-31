@@ -616,3 +616,242 @@ unique_ptr<T> make_unique(Args&&... args) {
 ```
 
 那个比较长的模板移动构造函数可以保证智能指针关于继承以及 const 的转换正确。
+
+## 条款 29：引用计数
+
+引用计数计数允许多个等值对象共享同一个实值。其有两个动机：一是为了简化堆上对象周边的记录工作；二是最好让所有等值对象共享一份实值。
+
+下面有两个实现，一个是带引用计数的字符串，另一个是将引用计数加到既有的类上。
+
+### 引用计数字符串
+
+原书中实现这个引用计数字符串，使用了四个类，RCObject、RCPtr、String 和 StringValue。使用 `RCPtr<T>` 有两个要求：一是 `T` 的拷贝构造函数执行深层复制，二是其对象所指对象，类型为 `T`，而非 T 的派生类。
+
+```cpp
+#include <cstring>
+
+template<class T>
+class RCPtr {
+public:
+    RCPtr(T* realPtr = 0);
+    RCPtr(const RCPtr& rhs);
+    ~RCPtr();
+
+    RCPtr& operator=(const RCPtr& rhs);
+
+    T* operator->() const;
+    T& operator*() const;
+
+private:
+    T *pointee;
+    void init();
+};
+
+template<class T>
+void RCPtr<T>::init() {
+    if (pointee == 0) return;
+    if (pointee->isShareable() == false) {
+        pointee = new T(*pointee);
+    }
+    pointee->addReference();
+}
+
+template<class T>
+RCPtr<T>::RCPtr(T* realPtr): pointee(realPtr) { init();}
+
+template<class T>
+RCPtr<T>::RCPtr(const RCPtr& rhs): pointee(rhs.pointee) {
+    init();
+}
+
+template<class T>
+RCPtr<T>::~RCPtr() {
+    if (pointee) pointee->removeReference();
+}
+
+template<class T>
+RCPtr<T>& RCPtr<T>::operator=(const RCPtr& rhs) {
+    if (pointee != rhs.pointee) {
+        if (pointee) pointee->removeReference(0);
+        pointee = rhs.pointee;
+        init();
+    }
+    return *this;
+}
+
+template<class T>
+T* RCPtr<T>::operator->() const { return pointee;}
+
+template<class T>
+T& RCPtr<T>::operator*() const { return *pointee;}
+
+class RCObject {
+public:
+    void addReference();
+    void removeReference();
+    void markUnshareable();
+    bool isShareable() const;    
+    bool isShared() const;
+protected:
+    RCObject();
+    RCObject(const RCObject& rhs);
+    RCObject& operator=(const RCObject& rhs);
+    virtual ~RCObject() = 0;
+private:
+    int refCount;
+    bool shareable;
+};
+
+RCObject::RCObject(): refCount(0), shareable(true) {}
+RCObject::RCObject(const RCObject&): refCount(0), shareable(true) {}
+RCObject& RCObject::operator=(const RCObject&) { return *this;}
+RCObject::~RCObject() {}
+void RCObject::addReference() { ++refCount;}
+void RCObject::removeReference() {
+    if (--refCount == 0) delete this;
+}
+void RCObject::markUnshareable() { shareable = false; }
+bool RCObject::isShareable() const { return shareable;}
+bool RCObject::isShared() const { return refCount > 1;}
+
+class String {
+public:
+    String(const char *value="");
+    const char& operator[](int index) const;
+    char& operator[](int index);
+private:
+    struct StringValue: public RCObject {
+        char *data;
+        StringValue(const char *initValue);
+        StringValue(const StringValue& rhs);
+        void init(const char *initValue);
+        ~StringValue();
+    };
+    RCPtr<StringValue> value;
+};
+
+void String::StringValue::init(const char* initValue) {
+    data = new char[strlen(initValue) + 1];
+    strcpy(data, initValue);
+}
+
+String::StringValue::StringValue(const char *initValue) {
+    init(initValue);
+}
+
+String::StringValue::StringValue(const StringValue& rhs) {
+    init(rhs.data);
+}
+
+String::StringValue::~StringValue() { delete [] data;}
+
+String::String(const char *initValue):value(new StringValue(initValue)) {}
+
+const char& String::operator[](int index) const {
+    return value->data[index];
+}
+
+char& String::operator[](int index) {
+    if (value->isShared()) {
+        value = new StringValue(value->data);
+    }
+    value->markUnshareable();
+    return value->data[index];
+}
+```
+
+### 泛化版；适用于其他类的引用计数
+
+这里新引入一个类 `RCIPtr`，这个类与之前的 `RCPtr` 的区别在于，RCPtr 直接指向实值，而 RCIPtr 通过中介层 CountHolder 指向实值。第二，RCIPtr 将 `->` 和 `*` 重载了，这样只要有非 const 权限操作发生，写时进行复制就会自动进行。第三，需要做引用计数的类无需再派生自 `RCObject` 了。
+
+```cpp
+template<class T>
+class RCIPtr {
+public:
+    RCIPtr(T* realPtr = 0);
+    RCIPtr(const RCIPtr& rhs);
+    ~RCIPtr();
+
+    RCIPtr& operator=(const RCIPtr& rhs);
+    const T* operator->() const;
+    T* operator->();
+    const T& operator*() const;
+    T& operator*();
+
+private:
+    struct CountHolder: public RCObject {
+        ~CountHolder() { delete pointee;}
+        T *pointee;
+    }
+    CountHolder *counter;
+    void init();
+    void makeCopy();
+};
+
+template<class T>
+void RCIPtr<T>::init() {
+    if (counter->isShareable() == false) {
+        T *oldValue = counter->pointee;
+        counter = new CountHolder;
+        counter->pointee = new T(*oldValue);
+    }
+    pointee->addReference();
+}
+
+template<class T>
+RCIPtr<T>::RCIPtr(T* realPtr): counter(new CountHolder) {
+    counter->pointee = realPtr;
+    init();
+}
+
+template<class T>
+RCIPtr<T>::RCIPtr(const RCIPtr& rhs): counter(rhs.counter) {
+    init();
+}
+
+template<class T>
+RCIPtr<T>::~RCIPtr() {
+    counter -> removeReference();
+}
+
+template<class T>
+RCIPtr<T>& RCIPtr<T>::operator=(const RCIPtr& rhs) {
+    if (counter != rhs.counter) {
+        counter->removeReference(0);
+        counter = rhs.counter;
+        init();
+    }
+    return *this;
+}
+
+template<class T>
+const T* RCIPtr<T>::operator->() const { 
+    return counter->pointee;
+}
+
+template<class T>
+const T& RCIPtr<T>::operator*() const {
+    return *(counter->pointee);
+}
+
+template<class T>
+void RCIPtr<T>::makeCopy() {
+    if (counter->isShared()) {
+        T *oldValue = counter->pointee;
+        counter->removeReference();
+        counter = new CountHolder;
+        counter->pointee = new T(*oldValue);
+        counter->addReference();
+    }
+}
+
+template<class T>
+T* RCIPtr<T>::operator->() {
+    makeCopy(); return counter->pointee;
+}
+
+template<class T>
+T& RCIPtr<T>::operator*() {
+    makeCopy(); return *(counter->pointee);
+}
+```
