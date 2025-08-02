@@ -855,3 +855,75 @@ T& RCIPtr<T>::operator*() {
     makeCopy(); return *(counter->pointee);
 }
 ```
+
+## 条款 30：Proxy class（代理类）
+
+代理类用途很多，比如实现二维数组，区分读写（左右值）等。
+
+### 实现二维数组
+
+具体操作大致是实现 `Array2D` 和 `Array1D` 两个类，其中都重载 `[]` 运算符即可。
+
+### 区分 `operator[]` 的读写动作
+
+```cpp
+#include <vector>
+#include <iostream>
+
+template <typename T>
+class MyContainer {
+private:
+    std::vector<T> data;
+
+    // 代理对象：区分读写操作
+    class Proxy {
+    private:
+        MyContainer& container;  // 引用容器
+        size_t index;            // 元素索引
+    public:
+        Proxy(MyContainer& c, size_t i) : container(c), index(i) {}
+
+        // 写操作：对代理对象赋值时调用
+        Proxy& operator=(const T& value) {
+            std::cout << "写操作：index " << index << " = " << value << std::endl;
+            container.data[index] = value;  // 实际写入
+            return *this;
+        }
+
+        // 读操作：将代理对象转换为 T 类型时调用
+        operator T() const {
+            std::cout << "读操作：index " << index << " = " << container.data[index] << std::endl;
+            return container.data[index];  // 实际读取
+        }
+    };
+
+public:
+    MyContainer(size_t size, const T& init) : data(size, init) {}
+
+    // operator[] 返回代理对象
+    Proxy operator[](size_t index) {
+        return Proxy(*this, index);  // 传递容器自身和索引
+    }
+};
+
+int main() {
+    MyContainer<int> obj(5, 0);  // 初始化 5 个元素为 0
+
+    obj[2] = 3;       // 触发写操作：operator=
+    int x = obj[2];   // 触发读操作：operator int()
+    return 0;
+}
+```
+
+### 缺陷
+
+代理类也有其缺陷（需要加入的内容），如：
+
+1. 取地址问题。需要重载 `operator&`。
+2. `operator+=` 等符号缺失，需要重载。
+3. 通过 proxy 调用真实对象的成员对象。必须把每一个函数重载。
+
+无法完全取代真实对象的原因有二：
+
+1. 用户把它们传递给接受非 const 引用的函数
+2. 隐式类型转换。假如有连续多次的隐式类型转换会失败。
