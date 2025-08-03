@@ -927,3 +927,61 @@ int main() {
 
 1. 用户把它们传递给接受非 const 引用的函数
 2. 隐式类型转换。假如有连续多次的隐式类型转换会失败。
+
+## 条款 31：让函数根据一个以上的对象类型来决定如何虚化
+
+### 虚函数 + RTTI
+
+这种方式并不好，大致是一堆 if-else 判断 typeid，然后调用相应的函数。它会造成程序难以维护。
+
+### 只使用虚函数
+
+在每一个类中定义一大堆虚函数，每个虚函数名称相同，但形参为不同的类。
+
+```cpp
+class SpaceShip: public GameObject {
+public:
+  virtual void collide(GameObject& otherObject);
+  virtual void collide(SpaceShip& otherObject);
+  virtual void collide(SpaceStation& otherObject);
+  virtual void collide(Asteroid& otherObject);
+  ...
+};
+
+void SpaceShip::collide(GameObject& otherObject) {
+  otherObject.collide(*this);
+}
+```
+
+这种方法比上面的 虚函数+RTTI 的方法安全一些，但如果你对头文件权力不够，会束缚系统的扩充性。
+
+### 自行仿真虚函数表
+
+与只使用虚函数方法相比，本方法使用不同名称作为虚函数，如下：
+
+```cpp
+class SpaceShip: public GameObject {
+public:
+  virtual void collide(GameObject& otherObject);
+
+  virtual void hitSpaceShip(GameObject& spaceShip);
+  virtual void hitSpaceStation(GameObject& spaceStation);
+  virtual void hitAsteroid(GameObject& asteroid);
+  ...
+};
+
+void SpaceShip::hitSpaceShip(GameObject& spaceShip) {
+  SpaceShip& otherShip = dynamic_cast<SpaceShip&>(spaceShip); // 为防止出问题，必须在所有虚函数顶端使用 dynamic_cast 转换指针
+  ...
+}
+```
+
+然后使用一个 map 记录函数地址即可。
+
+### 使用非成员函数的碰撞处理函数
+
+可以在一个匿名 namespace 中（其中每样东西只对其包含文件私有）把所有需要处理的函数定义出来。然后用 map 记录函数地址即可。
+
+### 继承 + 自行仿真的虚函数表
+
+如果新增了新的继承类，而之前的匿名 namespace 中没有相应函数，那么就不得不使用之前的只使用虚函数的双虚函数方法。
