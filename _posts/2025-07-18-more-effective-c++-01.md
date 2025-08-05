@@ -1009,3 +1009,28 @@ void SpaceShip::hitSpaceShip(GameObject& spaceShip) {
 > - 存在直接使用该类实例的业务场景。
 
 总之，本条款见仁见智吧。
+
+## 条款 34：如何在同一个程序中结合 C++ 和 C
+
+将 C++ 和 C 结合，有四个内容需要考虑：
+
+1. 名称重置（Name Mangling）
+   1. 由于 C 语言中无法将函数名称重载，因此必须以某种方式告诉 C++ 编译器，不要重整某些函数名称，方法是在函数前加上 `extern "C"`，或者 `extern "C"` 后用花括号封住头尾，施行于一整组函数上。
+   ```cpp
+   #ifdef __cplusplus
+   extern "C" {
+   #endif
+    void a();
+    void b();
+    ...
+   #ifdef __cplusplus 
+   }
+   #endif
+   ```
+2. 静态对象初始化：由于 C++ 编译器会在 main 函数开头加上构造 static 内容的函数以及结尾加上析构 static 内容的函数，因此最好使用 C++ 来写 main 函数，如果原本 main 函数写在 C 语言中，请移动到 C++ 中。
+3. 动态内存分配：请严格使用 new/delete, malloc/free 一一对应。
+4. 数据结构兼容性：在 C 和 C++ 之间对数据结构做双向交流，应该是安全的。但是，请不要加上**虚函数和继承**。
+
+## 条款 35：让自己习惯标准 C++ 语言
+
+继续学习 C++ 吧！
