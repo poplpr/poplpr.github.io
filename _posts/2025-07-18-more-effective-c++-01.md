@@ -1034,3 +1034,52 @@ void SpaceShip::hitSpaceShip(GameObject& spaceShip) {
 ## 条款 35：让自己习惯标准 C++ 语言
 
 继续学习 C++ 吧！
+
+## 一些 g++ 指令
+
+- `-c`: 仅编译，不链接
+- `-S`: 将源代码编译到汇编语言阶段（注意是大写 `S`）
+- `-I`: 指定头文件搜索路径
+- `-fPIC`：生成动态库
+
+找不到动态库怎么办？使用 `ldd <filename>` 查找文件依赖的动态库。
+
+## GNU 的二进制工具
+
+简单列举一下：
+
+- 来自 binutils 工具
+  - gas/ld
+  - ar/ranlib
+  - gprof
+  - nm/strings/objdump/readelf/strip/c++filt
+  - objcopy/size
+- 来自 libc 的工具
+  - ldd：打印共享库依赖
+  
+一些工具介绍：
+
+- nm：列出目标文件符号
+  - 输出格式
+    ```
+    符号值 符号类型 符号名
+    0000000000400604 T main
+    ```
+  - 符号类型
+    - 大写字母：全局符号
+    - 小写字母：局部符号
+  - 常用符号类型
+    - T 代码段
+    - U 未定义
+    - D 数据段
+    - B bss 段
+- strip/strings
+  - strip
+    - 删除符号
+  - strings
+    - 显示文件中的可打印字符
+    
+## 其他工具
+
+- **autotools** 是一套用于 自动化软件构建、配置和安装流程 的工具集，由 GNU 项目开发，主要用于跨平台 C/C++ 项目（也支持其他语言）。它的核心目标是让开发者能够写出 平台无关的构建脚本，使软件在不同操作系统（如 Linux、macOS、Windows）和硬件架构上都能顺利编译、安装。
+- **cmake**
