@@ -45,9 +45,10 @@ docker run -itd --name minirts --privileged -v D:/code/ELF1120:/root/ELF1120 doc
 > ```bash
 > apt-get update
 > apt install -y wget
-> apt install build-essential # 包含了 gcc g++ 11.4.0
-> apt install libtbb-dev
-> apt install cmake
+> apt install -y build-essential # 包含了 gcc g++ 11.4.0
+> apt install -y git
+> apt install -y libtbb-dev
+> apt install -y cmake
 > ```
 >
 > 接下来装一下 conda 和 python
@@ -108,3 +109,16 @@ cd ~/minirts/rts/build
 python3 -m http.server 8848 --directory ~/minirts/rts/frontend/
 ```
 
+# docker 重启关闭的容器
+
+首先如果不知道关闭的容器名称的话，输入下面的命令查看名称：
+
+```bash
+docker ps -a
+```
+
+然后输入下面的命令启动容器：
+
+```bash
+docker start <容器名称 or Id>
+```
